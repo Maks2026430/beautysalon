@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-cream text-espresso font-sans antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-serif;
+  }
+}
+
+@layer components {
+  .container-content {
+    @apply mx-auto w-full max-w-content px-5 md:px-8 xl:px-10;
+  }
+
+  /* Primary pill button (mauve-rose accent, harmonizes with plum). */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-accent
+           px-7 py-3.5 text-sm font-medium tracking-wide text-cream
+           transition-colors duration-300 hover:bg-accent-dark
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50;
+  }
+
+  /* Plum-accented pill button (for use on light or tinted backgrounds). */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-plum
+           px-7 py-3.5 text-sm font-medium tracking-wide text-cream
+           transition-colors duration-300 hover:bg-plum-dark
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-plum/50;
+  }
+
+  /* Soft blurred decorative blob — absolutely positioned color accent behind
+     content. Pair with a color/opacity utility, e.g.
+     <div class="section-blob bg-accent/20 ..." />. */
+  .section-blob {
+    @apply pointer-events-none absolute rounded-full blur-3xl;
+  }
+
+  /* Secondary outline button. */
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border
+           border-espresso/20 px-7 py-3.5 text-sm font-medium tracking-wide
+           text-espresso transition-colors duration-300 hover:border-espresso/50
+           hover:bg-espresso/[0.03] focus:outline-none focus-visible:ring-2
+           focus-visible:ring-espresso/20;
+  }
+
+  /* Form input / textarea used across the admin panel. */
+  /* text-base (16px) on mobile prevents iOS Safari auto-zoom on focus;
+     shrinks to text-sm on desktop. */
+  .input {
+    @apply w-full rounded-xl border border-sand bg-white/60 px-4 py-2.5 text-base
+           text-espresso outline-none focus:border-accent md:text-sm;
+  }
+
+  /* Small uppercase eyebrow label above section titles. */
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-widest2 text-accent;
+  }
+
+  /* Warm card surface — subtle white→cream gradient, matches the landing cards.
+     Used across the client dashboard and admin/CRM for a single visual style. */
+  .surface {
+    @apply bg-gradient-to-br from-white to-cream/50;
+  }
+
+  /* Neutral "inactive/secondary" chip in the warm palette (replaces dead greys). */
+  .badge-muted {
+    @apply rounded-full bg-sand px-2 py-0.5 text-xs text-espresso/55;
+  }
+}

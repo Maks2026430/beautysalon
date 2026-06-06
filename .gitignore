@@ -1,0 +1,35 @@
+# ─── Секреты / окружение ──────────────────────────────
+.env
+.env.local
+.env.*.local
+# .env.example остаётся в репозитории как шаблон
+
+# ─── Node / Next.js (frontend) ────────────────────────
+node_modules/
+.next/
+out/
+build/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Python (backend) ─────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ─── TLS-сертификаты (приватные ключи!) ───────────────
+nginx/certs/*
+!nginx/certs/.gitkeep
+
+# ─── ОС / редакторы ───────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
