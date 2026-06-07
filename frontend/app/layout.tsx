@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
+import { siteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -15,13 +16,6 @@ const inter = Inter({
   display: "swap",
 });
 
-// Базовый адрес сайта — для абсолютных ссылок на OG-картинку.
-// Берём из NEXT_PUBLIC_API_URL (…/api на проде), убираем хвост /api.
-const siteUrl =
-  (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/api\/?$/, "") ||
-  process.env.FRONTEND_URL ||
-  "http://localhost:3000";
-
 const TITLE = "Lumière — салон красоты и эстетической косметологии";
 const DESCRIPTION =
   "Lumière — премиальный салон красоты. Уход за лицом и телом, аппаратная косметология, массаж, ногтевой сервис, волосы, брови и ресницы. Скидка 20% на первое посещение.";
@@ -30,6 +24,17 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: TITLE, template: "%s · Lumière" },
   description: DESCRIPTION,
+  keywords: [
+    "салон красоты",
+    "косметология",
+    "аппаратная косметология",
+    "массаж",
+    "маникюр",
+    "наращивание ресниц",
+    "Москва",
+  ],
+  alternates: { canonical: "/" },
+  robots: { index: true, follow: true },
   openGraph: {
     type: "website",
     locale: "ru_RU",

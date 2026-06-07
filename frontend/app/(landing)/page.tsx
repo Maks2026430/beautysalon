@@ -8,10 +8,12 @@ import { Masters } from "@/components/landing/Masters";
 import { Reviews } from "@/components/landing/Reviews";
 import { Contacts } from "@/components/landing/Contacts";
 import { Footer } from "@/components/landing/Footer";
+import { JsonLd } from "@/components/landing/JsonLd";
 
 export default function LandingPage() {
   return (
     <BotProvider>
+      <JsonLd />
       <Header />
       <main>
         <Hero />

@@ -4,6 +4,9 @@ import { salon } from "@/lib/data";
 export const alt = "Lumière — эстетическая косметология и красота";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+// Генерируем по запросу, а не на этапе сборки: ImageResponse (@vercel/og)
+// падает при статическом пре-рендере на некоторых хостах (Windows).
+export const dynamic = "force-dynamic";
 
 // Подгружаем кириллический шрифт (Cormorant Garamond) для satori.
 // Старый User-Agent → Google отдаёт TTF (satori не умеет woff2).
