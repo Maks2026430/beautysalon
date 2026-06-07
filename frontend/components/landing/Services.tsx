@@ -11,7 +11,8 @@ import { SectionHeading } from "@/components/landing/SectionHeading";
 // Метаданные категорий: фото-обложка, цвет (терракота/слива), иконка и размер
 // плитки в бенто-сетке. Терракота и слива чередуются для разнообразия.
 type Tone = "accent" | "plum";
-type Meta = { tone: Tone; photo: string; span: string; icon: JSX.Element };
+// light: более лёгкое затемнение для светлых фото (текст всё ещё читаем).
+type Meta = { tone: Tone; photo: string; span: string; icon: JSX.Element; light?: boolean };
 
 const U = (id: string) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`;
@@ -55,7 +56,8 @@ const CATEGORY_META: Record<string, Meta> = {
   },
   "Брови и ресницы": {
     tone: "plum",
-    photo: U("1531746020798-e6953c6e8e04"),
+    photo: U("1596704017254-9b121068fb31"),
+    light: true,
     span: "md:col-start-1 md:row-start-1 md:row-span-2",
     icon: (
       <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Zm10-2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" />
@@ -129,7 +131,7 @@ export function Services() {
   }, [active]);
 
   return (
-    <section id="services" className="relative overflow-hidden bg-white py-20 md:py-28">
+    <section id="services" className="relative overflow-hidden bg-cream py-20 md:py-28">
       {/* Декоративные размытые пятна на фоне */}
       <div className="section-blob -left-32 top-20 h-80 w-80 bg-rose/50" />
       <div className="section-blob -right-24 bottom-10 h-72 w-72 bg-accent/10" />
@@ -160,8 +162,12 @@ export function Services() {
                     alt={category}
                     className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
-                  {/* Тёмный градиент снизу — для читаемости текста */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-espresso/80 via-espresso/20 to-transparent" />
+                  {/* Градиент снизу — для читаемости текста (легче для светлых фото) */}
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-t to-transparent ${
+                      m.light ? "from-espresso/50" : "from-espresso/80 via-espresso/20"
+                    }`}
+                  />
 
                   <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-4 md:p-5">
                     <div>
