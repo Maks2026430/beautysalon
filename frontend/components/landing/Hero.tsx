@@ -31,10 +31,10 @@ export function Hero() {
         src="/hero-model.png"
         alt=""
         aria-hidden
-        className="pointer-events-none absolute bottom-0 right-0 h-[34%] w-auto select-none object-contain object-bottom md:h-[80%]"
+        className="pointer-events-none absolute bottom-0 right-0 h-[25%] w-auto select-none object-contain object-bottom md:h-[80%]"
       />
 
-      <div className="container-content relative z-10 flex min-h-[100svh] items-start pt-20 pb-16 md:items-center md:pt-24">
+      <div className="container-content relative z-10 flex min-h-[100svh] items-start pt-24 pb-16 md:items-center md:pt-24">
         <div className="max-w-2xl">
           <motion.span
             initial={{ opacity: 0, y: 16 }}
