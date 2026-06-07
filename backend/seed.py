@@ -18,13 +18,20 @@ from app.services.price_list import SERVICES
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("seed")
 
-# Салон работает ежедневно 09:00–21:00 по Москве. Время в БД хранится как
-# «UTC», а фронтенд и SMS показывают его в Europe/Moscow (+3 часа), поэтому
-# для отображения 09:00–21:00 МСК храним 06:00–18:00. Дни недели 0..6 = Пн..Вс.
-DEFAULT_SCHEDULE = [
-    {"day_of_week": d, "start_time": time(6, 0), "end_time": time(18, 0)}
-    for d in range(0, 7)
-]
+# Салон работает 09:00–21:00 по Москве. Время в БД хранится как «UTC», а
+# фронтенд и SMS показывают его в Europe/Moscow (+3 часа), поэтому для
+# отображения 09:00–21:00 МСК храним 06:00–18:00. Дни недели 0..6 = Пн..Вс.
+WORK_START = time(6, 0)
+WORK_END = time(18, 0)
+
+
+def _schedule(days_off: list[int]) -> list[dict]:
+    """Рабочая неделя 09:00–21:00 МСК, кроме выходных дней (days_off)."""
+    return [
+        {"day_of_week": d, "start_time": WORK_START, "end_time": WORK_END}
+        for d in range(7)
+        if d not in days_off
+    ]
 
 MASTERS = [
     {
@@ -34,6 +41,7 @@ MASTERS = [
         "bio": "12 лет в эстетической косметологии, эксперт по уходовым программам и пилингам.",
         "rating": 4.9,
         "photo_url": "/masters/3.png",
+        "days_off": [2, 6],  # Ср, Вс
     },
     {
         "slug": "m-irina",
@@ -42,6 +50,7 @@ MASTERS = [
         "bio": "Сертифицированный мастер скульптурного и релакс-массажа, автор авторских техник.",
         "rating": 5.0,
         "photo_url": "/masters/2.png",
+        "days_off": [0, 6],  # Пн, Вс
     },
     {
         "slug": "m-katya",
@@ -50,6 +59,7 @@ MASTERS = [
         "bio": "Финалист конкурсов nail-art, создаёт идеальную форму и стойкое покрытие.",
         "rating": 4.8,
         "photo_url": "/masters/5.jpg",
+        "days_off": [1, 4],  # Вт, Пт
     },
     {
         "slug": "m-marina",
@@ -58,6 +68,7 @@ MASTERS = [
         "bio": "Работает на аппаратах RF, IPL и карбоновом лазере, эксперт по anti-age программам.",
         "rating": 4.9,
         "photo_url": "/masters/6.png",
+        "days_off": [3, 6],  # Чт, Вс
     },
     {
         "slug": "m-sofia",
@@ -66,6 +77,7 @@ MASTERS = [
         "bio": "Стилист-колорист, мастер сложных окрашиваний и причёсок для любого случая.",
         "rating": 4.9,
         "photo_url": "/masters/1.png",
+        "days_off": [0, 3],  # Пн, Чт
     },
     {
         "slug": "m-polina",
@@ -74,6 +86,7 @@ MASTERS = [
         "bio": "Создаёт идеальную форму бровей и выразительный взгляд: ламинирование и наращивание ресниц.",
         "rating": 4.8,
         "photo_url": "/masters/4.jpg",
+        "days_off": [2, 5],  # Ср, Сб
     },
     {
         "slug": "m-alina",
@@ -82,6 +95,16 @@ MASTERS = [
         "bio": "Деликатная депиляция воском и шугарингом с гладким и долгим результатом.",
         "rating": 4.9,
         "photo_url": "/masters/7.jpg",
+        "days_off": [1, 4],  # Вт, Пт
+    },
+    {
+        "slug": "m-darya",
+        "name": "Дарья Кравцова",
+        "specializations": ["Волосы и причёски"],
+        "bio": "Колорист и мастер стрижек: сложные окрашивания, уход и восстановление волос.",
+        "rating": 4.9,
+        "photo_url": "/masters/8.png",
+        "days_off": [5, 6],  # Сб, Вс
     },
 ]
 
@@ -115,7 +138,7 @@ def seed_masters(db) -> None:
         master.is_active = True
         # Replace schedules each run so they stay in sync (cascade delete-orphan).
         master.schedules.clear()
-        for slot in DEFAULT_SCHEDULE:
+        for slot in _schedule(m["days_off"]):
             master.schedules.append(MasterSchedule(**slot))
     logger.info("seeded %d masters", len(MASTERS))
 

@@ -1,11 +1,13 @@
-"""Сброс (или создание) пароля администратора.
+"""Сброс пароля и (опционально) смена email администратора.
 
 Запуск внутри контейнера backend:
-    python reset_admin.py 'новый-пароль'
-Без аргумента берёт пароль из настройки ADMIN_PASSWORD (.env).
+    python reset_admin.py 'новый-пароль'                  # только пароль
+    python reset_admin.py 'новый-пароль' 'email@домен'    # пароль + новый логин
 
-В отличие от seed.py, этот скрипт ОБНОВЛЯЕТ пароль у уже существующего админа
-(seed создаёт админа только если его нет и пароль не трогает).
+Без аргументов берёт ADMIN_EMAIL/ADMIN_PASSWORD из .env. В отличие от seed.py,
+скрипт ОБНОВЛЯЕТ существующего админа (seed создаёт его только если отсутствует
+и пароль не меняет). При смене email переименовывает текущего админа, не плодя
+дубликаты.
 """
 import sys
 
@@ -19,25 +21,27 @@ from app.models import Staff
 
 def main() -> None:
     new_password = sys.argv[1] if len(sys.argv) > 1 else settings.ADMIN_PASSWORD
+    new_email = sys.argv[2] if len(sys.argv) > 2 else settings.ADMIN_EMAIL
+
     db = SessionLocal()
     try:
-        admin = db.scalar(select(Staff).where(Staff.email == settings.ADMIN_EMAIL))
+        # Сначала ищем по новому email, иначе подхватываем любого существующего
+        # админа (переименование), иначе создаём нового.
+        admin = db.scalar(select(Staff).where(Staff.email == new_email))
         if admin is None:
-            admin = Staff(
-                email=settings.ADMIN_EMAIL,
-                name=settings.ADMIN_NAME,
-                role="admin",
-                password_hash=hash_password(new_password),
-            )
+            admin = db.scalar(select(Staff).where(Staff.role == "admin"))
+        if admin is None:
+            admin = Staff(name=settings.ADMIN_NAME, role="admin")
             db.add(admin)
             action = "создан"
         else:
-            admin.password_hash = hash_password(new_password)
             action = "обновлён"
+        admin.email = new_email
+        admin.password_hash = hash_password(new_password)
         db.commit()
         print("=" * 48)
         print(f"Админ {action}.")
-        print(f"  Логин:  {settings.ADMIN_EMAIL}")
+        print(f"  Логин:  {new_email}")
         print(f"  Пароль: {new_password}")
         print("=" * 48)
     finally:
