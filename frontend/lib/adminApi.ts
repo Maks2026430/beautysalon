@@ -54,7 +54,11 @@ async function req<T>(path: string, opts: RequestInit = {}, retry = true): Promi
   if (!res.ok) {
     let detail = res.statusText;
     try {
-      detail = (await res.json()).detail ?? detail;
+      const d = (await res.json()).detail;
+      if (typeof d === "string") detail = d;
+      // FastAPI-ошибки валидации приходят массивом {loc, msg, type} — склеиваем msg.
+      else if (Array.isArray(d)) detail = d.map((e) => e?.msg ?? String(e)).join("; ");
+      else if (d) detail = typeof d === "object" ? JSON.stringify(d) : String(d);
     } catch {
       /* ignore */
     }

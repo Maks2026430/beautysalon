@@ -129,6 +129,8 @@ function StaffEditor({
   function mapError(msg: string): string {
     if (msg === "email_taken") return "Сотрудник с таким email уже существует.";
     if (msg === "cannot_delete_self") return "Нельзя удалить собственную учётную запись.";
+    if (/email/i.test(msg))
+      return "Email должен быть в формате почты, например salon@lumieresalon.ru";
     return msg;
   }
 
@@ -177,14 +179,20 @@ function StaffEditor({
     <SlideOver title={staff ? "Редактировать сотрудника" : "Новый сотрудник"} onClose={onClose}>
         <div className="space-y-4">
           <label className="block">
-            <span className="mb-1 block text-sm text-espresso/70">Email</span>
+            <span className="mb-1 block text-sm text-espresso/70">Email (логин для входа)</span>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={!!staff}
+              placeholder="salon@lumieresalon.ru"
               className="input disabled:opacity-60"
             />
+            {!staff && (
+              <span className="mt-1 block text-xs text-espresso/45">
+                Адрес в формате почты — его работники будут вводить как логин.
+              </span>
+            )}
           </label>
           <label className="block">
             <span className="mb-1 block text-sm text-espresso/70">Имя</span>
