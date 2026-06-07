@@ -18,10 +18,12 @@ from app.services.price_list import SERVICES
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("seed")
 
-# Mon..Sat 10:00–20:00 — a sensible default working week for every master.
+# Салон работает ежедневно 09:00–21:00 по Москве. Время в БД хранится как
+# «UTC», а фронтенд и SMS показывают его в Europe/Moscow (+3 часа), поэтому
+# для отображения 09:00–21:00 МСК храним 06:00–18:00. Дни недели 0..6 = Пн..Вс.
 DEFAULT_SCHEDULE = [
-    {"day_of_week": d, "start_time": time(10, 0), "end_time": time(20, 0)}
-    for d in range(0, 6)
+    {"day_of_week": d, "start_time": time(6, 0), "end_time": time(18, 0)}
+    for d in range(0, 7)
 ]
 
 MASTERS = [

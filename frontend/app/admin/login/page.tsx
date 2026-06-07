@@ -8,6 +8,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -41,13 +42,22 @@ export default function AdminLoginPage() {
           placeholder="Email"
           className="mt-6 w-full rounded-xl border border-sand bg-white/60 px-4 py-3 text-espresso outline-none focus:border-accent"
         />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          placeholder="Пароль"
-          className="mt-3 w-full rounded-xl border border-sand bg-white/60 px-4 py-3 text-espresso outline-none focus:border-accent"
-        />
+        <div className="relative mt-3">
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type={showPassword ? "text" : "password"}
+            placeholder="Пароль"
+            className="w-full rounded-xl border border-sand bg-white/60 px-4 py-3 pr-16 text-espresso outline-none focus:border-accent"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute inset-y-0 right-3 my-auto h-fit text-xs font-medium text-espresso/55 hover:text-accent"
+          >
+            {showPassword ? "Скрыть" : "Показать"}
+          </button>
+        </div>
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         <button type="submit" disabled={loading} className="btn-primary mt-5 w-full">
           {loading ? "Входим…" : "Войти"}

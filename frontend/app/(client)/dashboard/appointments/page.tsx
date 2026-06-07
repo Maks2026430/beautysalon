@@ -106,6 +106,11 @@ export default function AppointmentsPage() {
                 <div className="mt-1 text-xs text-espresso/45">
                   {STATUS_LABEL[a.status] ?? a.status}
                   {a.price != null && ` · ${formatPrice(a.price)}`}
+                  {a.discount_applied && (
+                    <span className="ml-1.5 rounded-full bg-accent/12 px-2 py-0.5 text-accent">
+                      −20%
+                    </span>
+                  )}
                 </div>
               </div>
               {tab === "upcoming" && canCancel(a) && (

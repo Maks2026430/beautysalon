@@ -141,16 +141,16 @@ export function Services() {
           subtitle="Выберите направление — внутри откроются процедуры с описанием и ценами."
         />
 
-        {/* Бенто-сетка категорий */}
-        <div className="mt-14 grid auto-rows-[8.5rem] grid-flow-row-dense grid-cols-2 gap-4 md:auto-rows-[11rem] md:grid-cols-3 xl:auto-rows-[13rem]">
+        {/* Ровная сетка категорий — одинаковые плитки */}
+        <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {categories.map((category, i) => {
             const m = meta(category);
             const count = itemsOf(category).length;
             return (
-              <Reveal key={category} delay={(i % 3) * 0.05} className={m.span}>
+              <Reveal key={category} delay={(i % 4) * 0.05}>
                 <button
                   onClick={() => setActive(category)}
-                  className="group relative h-full w-full overflow-hidden rounded-2xl text-left shadow-[0_10px_40px_-24px_rgba(46,42,38,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl text-left shadow-[0_10px_40px_-24px_rgba(46,42,38,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img

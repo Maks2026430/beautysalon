@@ -19,12 +19,15 @@ function BookingInner() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [booking, setBooking] = useState(false);
+  const [firstVisit, setFirstVisit] = useState(false);
 
   useEffect(() => {
     Promise.all([api.services(), api.masters()]).then(([s, m]) => {
       setServices(s);
       setMasters(m);
     });
+    // Первое посещение → скидка 20%. Узнаём по отсутствию прошлых записей.
+    api.my().then((a) => setFirstVisit(a.length === 0)).catch(() => {});
   }, []);
 
   // Load availability whenever both selections are present.
@@ -43,6 +46,24 @@ function BookingInner() {
   }, [serviceId, masterId]);
 
   const service = services.find((s) => s.id === serviceId);
+
+  // Показываем только мастеров, чья специализация совпадает с категорией услуги.
+  const availableMasters = useMemo(
+    () =>
+      service
+        ? masters.filter((m) => m.specializations?.includes(service.category ?? ""))
+        : masters,
+    [masters, service],
+  );
+
+  // Если выбранный мастер не подходит под новую услугу — сбрасываем выбор.
+  useEffect(() => {
+    if (masterId && !availableMasters.some((m) => m.id === masterId)) setMasterId("");
+  }, [availableMasters, masterId]);
+
+  // Цена со скидкой первого посещения (−20%).
+  const DISCOUNT = 20;
+  const discountedPrice = (p: number) => Math.round((p * (100 - DISCOUNT)) / 100);
 
   const grouped = useMemo(() => {
     const map = new Map<string, { label: string; slots: string[] }>();
@@ -99,8 +120,15 @@ function BookingInner() {
       {/* Master */}
       <section>
         <div className="eyebrow mb-3">2. Выберите мастера</div>
+        {!serviceId ? (
+          <p className="text-sm text-espresso/55">Сначала выберите услугу выше.</p>
+        ) : availableMasters.length === 0 ? (
+          <p className="text-sm text-espresso/55">
+            Для этой услуги пока нет доступного мастера.
+          </p>
+        ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {masters.map((m) => (
+          {availableMasters.map((m) => (
             <button
               key={m.id}
               onClick={() => setMasterId(m.id)}
@@ -124,6 +152,7 @@ function BookingInner() {
             </button>
           ))}
         </div>
+        )}
       </section>
 
       {/* Slots */}
@@ -169,7 +198,20 @@ function BookingInner() {
       {selectedSlot && service && (
         <div className="sticky bottom-4 flex flex-col items-start justify-between gap-3 rounded-2xl border border-accent/30 bg-cream/95 p-5 shadow-lg backdrop-blur sm:flex-row sm:items-center">
           <div className="text-sm text-espresso/70">
-            {service.name} · {formatPrice(service.price)}
+            <span>{service.name} · </span>
+            {firstVisit ? (
+              <span>
+                <span className="text-espresso/40 line-through">{formatPrice(service.price)}</span>{" "}
+                <span className="font-medium text-accent-dark">
+                  {formatPrice(discountedPrice(service.price))}
+                </span>{" "}
+                <span className="rounded-full bg-accent/12 px-2 py-0.5 text-xs text-accent">
+                  −20% первое посещение
+                </span>
+              </span>
+            ) : (
+              <span>{formatPrice(service.price)}</span>
+            )}
             <br />
             <span className="text-espresso">
               {formatWeekday(selectedSlot)}, {formatShortDate(selectedSlot)} в{" "}

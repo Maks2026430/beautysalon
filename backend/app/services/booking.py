@@ -5,7 +5,7 @@ Times are stored and compared as naive UTC throughout.
 from datetime import date, datetime, time, timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Appointment, Master, Service, User
@@ -13,6 +13,7 @@ from app.models import Appointment, Master, Service, User
 ACTIVE_STATUSES = ("pending", "confirmed")
 CANCEL_CUTOFF = timedelta(hours=2)   # can't cancel later than 2h before (spec 6.2)
 AVAILABILITY_DAYS = 14
+FIRST_VISIT_DISCOUNT = 20            # «Скидка 20% на первое посещение»
 
 
 def _require_service(db: Session, service_id) -> Service:
@@ -141,6 +142,15 @@ def create_appointment(db: Session, user: User, master_id, service_id, starts_at
     if _overlaps(starts_at, ends_at, existing):
         raise HTTPException(status_code=409, detail="slot_taken")
 
+    # Первое посещение (нет ни одной прошлой записи) → скидка 20%.
+    prior = db.scalar(
+        select(func.count()).select_from(Appointment).where(Appointment.user_id == user.id)
+    )
+    is_first_visit = not prior
+    price = float(service.price)
+    if is_first_visit:
+        price = round(price * (100 - FIRST_VISIT_DISCOUNT) / 100, 2)
+
     appt = Appointment(
         user_id=user.id,
         master_id=master.id,
@@ -148,7 +158,8 @@ def create_appointment(db: Session, user: User, master_id, service_id, starts_at
         starts_at=starts_at,
         ends_at=ends_at,
         status="confirmed",
-        price=service.price,
+        price=price,
+        discount_applied=is_first_visit,
     )
     db.add(appt)
     db.commit()
