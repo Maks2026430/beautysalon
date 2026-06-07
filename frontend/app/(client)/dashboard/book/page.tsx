@@ -25,6 +25,12 @@ function BookingInner() {
     Promise.all([api.services(), api.masters()]).then(([s, m]) => {
       setServices(s);
       setMasters(m);
+      // Бот передаёт услугу как slug — превращаем его в реальный id для выбора.
+      const param = params.get("service");
+      if (param && !s.some((x) => x.id === param)) {
+        const bySlug = s.find((x) => x.slug === param);
+        if (bySlug) setServiceId(bySlug.id);
+      }
     });
     // Первое посещение → скидка 20%. Узнаём по отсутствию прошлых записей.
     api.my().then((a) => setFirstVisit(a.length === 0)).catch(() => {});

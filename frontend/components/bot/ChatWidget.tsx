@@ -263,13 +263,22 @@ function ResultView({
 }) {
   const { recommendation: rec, discount_percent } = result;
   const router = useRouter();
+  const { closeBot } = useBot();
   const [saved, setSaved] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [needLogin, setNeedLogin] = useState(false);
   const [error, setError] = useState("");
 
+  // Записаться на рекомендованную процедуру: закрываем бота и ведём в форму
+  // записи (с предвыбранной услугой). Анонимных — на вход, скидка сохранится.
   function bookNow() {
-    document.getElementById("masters")?.scrollIntoView({ behavior: "smooth" });
+    closeBot();
+    if (auth.hasToken()) {
+      router.push(`/dashboard/book?service=${encodeURIComponent(rec.procedure_id)}`);
+    } else {
+      markPendingClaim(result.session_id);
+      router.push("/login");
+    }
   }
 
   async function saveOffer() {
