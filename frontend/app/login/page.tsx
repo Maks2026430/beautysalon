@@ -42,7 +42,9 @@ export default function LoginPage() {
       await auth.verifyOtp(phone, code, name || undefined);
       // If the user saved a bot offer while anonymous, persist it now.
       await claimPendingOffer();
-      router.push("/dashboard");
+      // Вернуть пользователя туда, откуда он шёл (?next=…), но только на наш сайт.
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.push(next && next.startsWith("/") ? next : "/dashboard");
     } catch (err) {
       setError(err instanceof ApiError && err.status === 400 ? "Неверный код" : "Ошибка входа");
     } finally {

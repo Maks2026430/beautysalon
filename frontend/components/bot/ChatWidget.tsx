@@ -273,11 +273,12 @@ function ResultView({
   // записи (с предвыбранной услугой). Анонимных — на вход, скидка сохранится.
   function bookNow() {
     closeBot();
+    const target = `/dashboard/book?service=${encodeURIComponent(rec.procedure_id)}`;
     if (auth.hasToken()) {
-      router.push(`/dashboard/book?service=${encodeURIComponent(rec.procedure_id)}`);
+      router.push(target);
     } else {
       markPendingClaim(result.session_id);
-      router.push("/login");
+      router.push(`/login?next=${encodeURIComponent(target)}`);
     }
   }
 

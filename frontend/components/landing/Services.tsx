@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { services as staticServices, formatPrice, formatDuration, type Service } from "@/lib/data";
-import { api } from "@/lib/api";
-import { useBot } from "@/components/bot/BotProvider";
+import { api, auth } from "@/lib/api";
 import { Reveal } from "@/components/landing/Reveal";
 import { SectionHeading } from "@/components/landing/SectionHeading";
 
@@ -87,9 +87,17 @@ function plural(n: number): string {
 }
 
 export function Services() {
-  const { openBot } = useBot();
+  const router = useRouter();
   const [services, setServices] = useState<Service[]>(staticServices);
   const [active, setActive] = useState<string | null>(null);
+
+  // «Записаться» на конкретную услугу: сразу в форму записи с этой услугой.
+  // Незалогиненных ведём на вход с возвратом обратно в запись.
+  function bookService(serviceId: string) {
+    setActive(null);
+    const target = `/dashboard/book?service=${serviceId}`;
+    router.push(auth.hasToken() ? target : `/login?next=${encodeURIComponent(target)}`);
+  }
 
   useEffect(() => {
     api
@@ -260,10 +268,7 @@ export function Services() {
                         {formatPrice(s.price)}
                       </div>
                       <button
-                        onClick={() => {
-                          openBot(`Хочу записаться на «${s.name}»`);
-                          setActive(null);
-                        }}
+                        onClick={() => bookService(s.id)}
                         className={`mt-2 text-sm font-medium ${TONE[meta(active).tone].chip} transition-opacity hover:opacity-70`}
                       >
                         Записаться →
