@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import { siteUrl } from "@/lib/siteUrl";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -35,6 +36,8 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
+  // Установка как приложение на iOS («На экран «Домой»»).
+  appleWebApp: { capable: true, title: "Lumière", statusBarStyle: "default" },
   openGraph: {
     type: "website",
     locale: "ru_RU",
@@ -50,6 +53,10 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#6E3D52",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -57,7 +64,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" className={`${cormorant.variable} ${inter.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ServiceWorkerRegister />
+      </body>
     </html>
   );
 }

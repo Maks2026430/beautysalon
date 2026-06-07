@@ -56,8 +56,7 @@ const CATEGORY_META: Record<string, Meta> = {
   },
   "Брови и ресницы": {
     tone: "plum",
-    photo: U("1596704017254-9b121068fb31"),
-    light: true,
+    photo: "/services/brows.jpg",
     span: "md:col-start-1 md:row-start-1 md:row-span-2",
     icon: (
       <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Zm10-2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" />
