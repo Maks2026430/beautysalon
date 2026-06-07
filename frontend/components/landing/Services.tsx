@@ -14,13 +14,10 @@ type Tone = "accent" | "plum";
 // light: более лёгкое затемнение для светлых фото (текст всё ещё читаем).
 type Meta = { tone: Tone; photo: string; span: string; icon: JSX.Element; light?: boolean };
 
-const U = (id: string) =>
-  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&q=80`;
-
 const CATEGORY_META: Record<string, Meta> = {
   "Уход за лицом": {
     tone: "accent",
-    photo: U("1570172619644-dfd03ed5d881"),
+    photo: "/services/face.jpg",
     span: "md:col-start-1 md:row-start-3",
     icon: (
       <path d="M12 3a6 6 0 0 0-6 6c0 4 2.7 7.5 6 9 3.3-1.5 6-5 6-9a6 6 0 0 0-6-6Zm0 5.5L13 11l2.5 1L13 13l-1 2.5L11 13l-2.5-1L11 11l1-2.5Z" />
@@ -28,7 +25,7 @@ const CATEGORY_META: Record<string, Meta> = {
   },
   "Аппаратная косметология": {
     tone: "plum",
-    photo: U("1512290923902-8a9f81dc236c"),
+    photo: "/services/hardware.jpg",
     span: "md:col-start-2 md:row-start-1",
     icon: (
       <path d="M4 20 14.5 9.5m0 0 1.8-4.3a1 1 0 0 1 1.3-.5l1.7.7a1 1 0 0 1 .5 1.3L15.5 8.5m4-3.5 1 1" />
@@ -36,19 +33,19 @@ const CATEGORY_META: Record<string, Meta> = {
   },
   Массаж: {
     tone: "accent",
-    photo: U("1544161515-4ab6ce6db874"),
+    photo: "/services/massage.jpg",
     span: "md:col-start-3 md:row-start-1",
     icon: <path d="M12 21c-4-2.5-7-6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 4-3 7.5-7 10Z" />,
   },
   "Ногтевой сервис": {
     tone: "plum",
-    photo: U("1604654894610-df63bc536371"),
+    photo: "/services/nails.jpg",
     span: "md:col-start-3 md:row-start-2",
     icon: <path d="M9 3c-1.5 1.5-2 4-2 7v9a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7m4 9V8c0-3-.5-5.5-2-7M7 12h8" />,
   },
   "Волосы и причёски": {
     tone: "accent",
-    photo: U("1562322140-8baeececf3df"),
+    photo: "/services/hair.jpg",
     span: "md:col-start-2 md:row-start-2 md:row-span-2",
     icon: (
       <path d="M6 6a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm0 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm2-3.2L20 18M8 14.2 20 6" />
@@ -64,8 +61,8 @@ const CATEGORY_META: Record<string, Meta> = {
   },
   Депиляция: {
     tone: "accent",
-    photo: U("1620916566398-39f1143ab7be"),
-    span: "col-span-2 md:col-span-1 md:col-start-3 md:row-start-3",
+    photo: "/services/depilation.jpg",
+    span: "md:col-start-3 md:row-start-3",
     icon: <path d="M11 20A7 7 0 0 1 4 13C4 7 9 4 20 4c0 11-3 16-9 16Zm0 0c0-5 2-9 7-12" />,
   },
 };
