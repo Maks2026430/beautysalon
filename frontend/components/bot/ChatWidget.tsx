@@ -224,8 +224,9 @@ export function ChatWidget() {
               )}
             </div>
 
-            {/* Поле ввода свободного вопроса — на стартовом экране и в чате */}
-            {(stage === "intro" || stage === "chat") && (
+            {/* Поле ввода свободного вопроса — доступно всегда, кроме шагов
+                квиза и экрана загрузки (там оно мешало бы кнопкам/прогрессу) */}
+            {stage !== "questions" && stage !== "loading" && (
               <form
                 onSubmit={sendMessage}
                 className="flex items-center gap-2 border-t border-sand px-4 py-3"
