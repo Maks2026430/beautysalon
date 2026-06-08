@@ -25,6 +25,7 @@ from app.models import DiscountOffer, Service, User
 from app.schemas.consultant import (
     BotAnswerRequest,
     BotAnswerResponse,
+    BotChatRequest,
     BotClaimRequest,
     BotStartResponse,
     ConsultAnswers,
@@ -41,6 +42,8 @@ router = APIRouter(prefix="/bot", tags=["bot"])
 CHAT_TTL = 2 * 60 * 60          # 2 hours  (spec 5.1)
 STATE_TTL = 2 * 60 * 60         # partial answers, same window
 OFFER_TTL = 48 * 60 * 60        # 48 hours (spec 5.5)
+CHATLOG_TTL = 2 * 60 * 60       # free-text conversation history window
+MAX_HISTORY = 12                # keep last N messages (6 turns) per session
 DISCOUNT_PERCENT = ai_consultant.DISCOUNT_PERCENT
 
 # Server-side mirror of the questionnaire order (spec 5.2). skin_type is asked
@@ -58,6 +61,10 @@ def _offer_key(session_id: str) -> str:
 
 def _state_key(session_id: str) -> str:
     return f"botstate:{session_id}"
+
+
+def _chatlog_key(session_id: str) -> str:
+    return f"chatlog:{session_id}"
 
 
 def _next_question(answers: dict) -> str | None:
@@ -146,6 +153,45 @@ def result(answers: ConsultAnswers) -> StreamingResponse:
             source=source,
         )
         yield f"event: done\ndata: {final.model_dump_json()}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ─── Free-text chat (streamed) ───────────────────────────────────────
+@router.post("/chat")
+def chat(body: BotChatRequest) -> StreamingResponse:
+    """Conversational assistant. Streams the reply as SSE `chunk` events, then a
+    `done` event with the session id. Multi-turn history is kept in Redis
+    (chatlog:{session_id}) so the client only sends the latest message."""
+    session_id = body.session_id or uuid.uuid4().hex
+    message = body.message.strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="empty_message")
+
+    raw = redis_client.get(_chatlog_key(session_id))
+    history = json.loads(raw) if raw else []
+
+    def event_stream():
+        pieces: list[str] = []
+        for piece in ai_consultant.stream_chat(history, message):
+            pieces.append(piece)
+            yield f"event: chunk\ndata: {json.dumps({'text': piece})}\n\n"
+
+        reply = "".join(pieces)
+        new_history = (
+            history
+            + [{"role": "user", "content": message}, {"role": "assistant", "content": reply}]
+        )[-MAX_HISTORY:]
+        redis_client.set(
+            _chatlog_key(session_id),
+            json.dumps(new_history, ensure_ascii=False),
+            ex=CHATLOG_TTL,
+        )
+        yield f"event: done\ndata: {json.dumps({'session_id': session_id})}\n\n"
 
     return StreamingResponse(
         event_stream(),

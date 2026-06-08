@@ -10,12 +10,15 @@ import {
   QUESTIONS,
   activeQuestions,
   getRecommendation,
+  streamChat,
   formatPrice,
   type Answers,
   type ConsultResult,
 } from "@/lib/consultant";
 
-type Stage = "intro" | "questions" | "loading" | "result";
+type Stage = "intro" | "questions" | "loading" | "result" | "chat";
+
+type ChatMessage = { role: "user" | "assistant"; text: string };
 
 const RESULT_KEY = "lumiere_offer";
 
@@ -39,6 +42,49 @@ export function ChatWidget() {
   const [qIndex, setQIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ConsultResult | null>(null);
+
+  // Free-text chat state.
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Keep the conversation scrolled to the latest message.
+  useEffect(() => {
+    if (stage === "chat") scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages, stage]);
+
+  async function sendMessage(e?: React.FormEvent) {
+    e?.preventDefault();
+    const text = input.trim();
+    if (!text || chatBusy) return;
+    setInput("");
+    setStage("chat");
+    // Append the user turn + an empty assistant turn that fills in as chunks arrive.
+    setMessages((m) => [...m, { role: "user", text }, { role: "assistant", text: "" }]);
+    setChatBusy(true);
+    try {
+      await streamChat(text, (chunk) => {
+        setMessages((m) => {
+          const copy = m.slice();
+          const last = copy[copy.length - 1];
+          copy[copy.length - 1] = { ...last, text: last.text + chunk };
+          return copy;
+        });
+      });
+    } catch {
+      setMessages((m) => {
+        const copy = m.slice();
+        copy[copy.length - 1] = {
+          role: "assistant",
+          text: "Извините, не получилось ответить. Попробуйте ещё раз или начните подбор процедуры.",
+        };
+        return copy;
+      });
+    } finally {
+      setChatBusy(false);
+    }
+  }
 
   // Resume an existing offer on first open so the timer keeps running.
   useEffect(() => {
@@ -138,7 +184,9 @@ export function ChatWidget() {
                 <div className="mt-1 text-xs text-espresso/45">
                   {stage === "questions"
                     ? `Вопрос ${qIndex + 1} из ${activeQuestions(answers).length}`
-                    : "Подберём процедуру за минуту"}
+                    : stage === "chat"
+                      ? "Спросите о процедурах, ценах, уходе"
+                      : "Подберём процедуру за минуту"}
                 </div>
               </div>
               <button onClick={closeBot} aria-label="Закрыть" className="text-espresso/40 hover:text-espresso">
@@ -158,7 +206,7 @@ export function ChatWidget() {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto px-5 py-5">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-5">
               {stage === "intro" && <Intro onStart={restart} />}
               {stage === "questions" && (
                 <QuestionView
@@ -171,7 +219,34 @@ export function ChatWidget() {
               {stage === "result" && result && (
                 <ResultView result={result} onRestart={restart} />
               )}
+              {stage === "chat" && (
+                <ChatView messages={messages} busy={chatBusy} onStartQuiz={restart} />
+              )}
             </div>
+
+            {/* Поле ввода свободного вопроса — на стартовом экране и в чате */}
+            {(stage === "intro" || stage === "chat") && (
+              <form
+                onSubmit={sendMessage}
+                className="flex items-center gap-2 border-t border-sand px-4 py-3"
+              >
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Напишите вопрос…"
+                  aria-label="Сообщение консультанту"
+                  className="flex-1 rounded-full border border-sand bg-white/70 px-4 py-2.5 text-sm text-espresso outline-none placeholder:text-espresso/35 focus:border-accent"
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || chatBusy}
+                  aria-label="Отправить"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-cream transition-colors hover:bg-accent-dark disabled:opacity-40"
+                >
+                  ↑
+                </button>
+              </form>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -191,6 +266,54 @@ function Intro({ onStart }: { onStart: () => void }) {
       <button onClick={onStart} className="btn-primary mt-6">
         Начать подбор →
       </button>
+      <p className="mt-4 text-xs text-espresso/45">
+        …или просто напишите вопрос ниже — расскажу о процедурах, ценах и уходе.
+      </p>
+    </div>
+  );
+}
+
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-1 py-1">
+      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-espresso/40" />
+      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-espresso/40 [animation-delay:0.15s]" />
+      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-espresso/40 [animation-delay:0.3s]" />
+    </span>
+  );
+}
+
+function ChatView({
+  messages,
+  busy,
+  onStartQuiz,
+}: {
+  messages: ChatMessage[];
+  busy: boolean;
+  onStartQuiz: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      {messages.map((m, i) => (
+        <div
+          key={i}
+          className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+            m.role === "user"
+              ? "self-end bg-accent text-cream"
+              : "self-start border border-sand bg-white/70 text-espresso"
+          }`}
+        >
+          {m.text || (m.role === "assistant" ? <TypingDots /> : "")}
+        </div>
+      ))}
+      {!busy && (
+        <button
+          onClick={onStartQuiz}
+          className="mt-1 self-start text-xs text-accent hover:underline"
+        >
+          ✨ Подобрать процедуру по шагам
+        </button>
+      )}
     </div>
   );
 }

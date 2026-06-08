@@ -223,6 +223,54 @@ async function streamResult(
   return result;
 }
 
+// Free-text chat: POST /bot/chat, stream the reply via SSE `chunk` events.
+// `onChunk` receives text pieces as they arrive for a live typing effect.
+export async function streamChat(
+  message: string,
+  onChunk: (text: string) => void,
+): Promise<void> {
+  const base = process.env.NEXT_PUBLIC_API_URL;
+  const session_id = getSessionId();
+
+  if (!base) {
+    onChunk(
+      "Чат сейчас недоступен. Попробуйте подбор процедуры кнопкой «Начать подбор».",
+    );
+    return;
+  }
+
+  const res = await fetch(`${base}/bot/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id, message }),
+  });
+  if (!res.ok || !res.body) throw new Error(`bot_chat_${res.status}`);
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let sep: number;
+    while ((sep = buffer.indexOf("\n\n")) !== -1) {
+      const frame = buffer.slice(0, sep);
+      buffer = buffer.slice(sep + 2);
+
+      let event = "message";
+      let data = "";
+      for (const line of frame.split("\n")) {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:")) data += line.slice(5).trim();
+      }
+      if (data && event === "chunk") onChunk((JSON.parse(data) as { text: string }).text);
+    }
+  }
+}
+
 export async function getRecommendation(
   answers: Answers,
   onChunk?: (text: string) => void,

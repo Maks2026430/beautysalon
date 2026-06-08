@@ -76,6 +76,17 @@ class DiscountState(BaseModel):
     expires_at: datetime | None = None
 
 
+class BotChatRequest(BaseModel):
+    """One turn of the free-text conversational assistant (POST /bot/chat).
+
+    History is kept server-side in Redis keyed by session_id, so the client only
+    sends the latest message.
+    """
+
+    session_id: str | None = Field(None, description="Browser session id; generated if absent")
+    message: str = Field(..., min_length=1, max_length=1000)
+
+
 class BotClaimRequest(BaseModel):
     """Claim the bot's offer for the logged-in user (POST /bot/discount/claim).
 

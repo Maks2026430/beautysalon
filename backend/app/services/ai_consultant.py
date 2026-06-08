@@ -12,6 +12,7 @@ Design notes:
 """
 import json
 import logging
+from typing import Iterator
 
 from app.core.config import settings
 from app.services import price_list
@@ -237,3 +238,91 @@ def recommend(answers: ConsultAnswers) -> tuple[Recommendation, str]:
     except Exception:  # noqa: BLE001 — never fail the request over the model
         logger.exception("consultant: AI recommendation failed, using fallback")
         return _fallback(answers), "fallback"
+
+
+# ─── Free-text conversational assistant ──────────────────────────────
+# Unlike recommend() (a one-shot structured pick), this is a multi-turn chat:
+# the visitor asks anything in their own words and the model answers, grounded
+# in the salon's real data so it never invents prices, services, hours, etc.
+
+# Mirrors frontend/lib/data.ts `salon`. Static → cache-friendly system prefix.
+SALON_INFO = """Информация о салоне «Lumière»:
+- Адрес: Москва, ул. Пречистенка, 12, БЦ «Аврора», 2 этаж.
+- Часы работы: ежедневно с 9:00 до 21:00.
+- Телефон: +7 (495) 123-45-67.
+- Скидка 20% на первое посещение (оформляется при подборе процедуры в этом чате).
+- Мастера: Анна Северова (косметолог-эстетист), Марина Дольская (аппаратная \
+косметология), Ирина Власова (массажист), Екатерина Лиман (ногтевой сервис), \
+София Зеленова (стилист-парикмахер, окрашивания), Полина Зорина (брови и ресницы), \
+Алина Морозова (депиляция)."""
+
+CHAT_INSTRUCTIONS = """Ты — Lumière, дружелюбный AI-консультант одноимённого бьюти-салона. \
+Помогаешь гостям: рассказываешь о процедурах, ценах, подготовке и уходе, советуешь \
+процедуру под запрос и помогаешь записаться.
+
+Правила:
+- Отвечай на русском, обращайся на «вы», тепло и по-человечески, без канцелярита.
+- Будь кратким: 1–4 предложения. Не перегружай гостя.
+- Опирайся ТОЛЬКО на данные салона и прайс-лист ниже — не выдумывай цены, услуги, \
+часы работы, адрес, имена мастеров.
+- Если спрашивают про услугу или цену, которой нет в прайсе, — честно скажи, что \
+её нет, и предложи близкую из списка.
+- Можешь объяснять процедуры: как проходит, как подготовиться, уход после, общие \
+противопоказания. Но ты не врач: не ставь диагнозов, при жалобах на здоровье \
+советуй очную консультацию специалиста.
+- Помогай записаться: предлагай подходящую процедуру, напоминай про скидку 20% на \
+первое посещение. Запись оформляется кнопкой «Записаться» на сайте.
+- Если вопрос не про салон, красоту или уход за собой — мягко верни разговор к \
+услугам салона.
+- Не давай гарантий результата и медицинских/лекарственных назначений."""
+
+_CHAT_SYSTEM_TEXT = (
+    CHAT_INSTRUCTIONS
+    + "\n\n"
+    + SALON_INFO
+    + "\n\nПрайс-лист салона (JSON):\n"
+    + price_list.PRICE_LIST_JSON
+)
+
+_CHAT_FALLBACK = (
+    "Извините, сейчас я не могу ответить подробно. Подобрать процедуру можно кнопкой "
+    "«Начать подбор», а записаться — на сайте. Чем ещё могу помочь?"
+)
+
+
+def stream_chat(history: list[dict], message: str) -> Iterator[str]:
+    """Yield the assistant reply in text pieces for a progressive typing effect.
+
+    `history` is prior turns ([{role, content}, ...]); `message` is the new user
+    turn. Falls back to a canned reply when no API key is set or the model errors,
+    so the chat never hard-fails.
+    """
+    if not settings.OPENAI_API_KEY:
+        yield _CHAT_FALLBACK
+        return
+
+    messages = (
+        [{"role": "system", "content": _CHAT_SYSTEM_TEXT}]
+        + history
+        + [{"role": "user", "content": message}]
+    )
+    try:
+        client = _get_client()
+        stream = client.chat.completions.create(
+            model=settings.OPENAI_MODEL,  # gpt-4o-mini
+            max_tokens=500,
+            temperature=0.6,
+            messages=messages,
+            stream=True,
+        )
+        produced = False
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content if chunk.choices else None
+            if delta:
+                produced = True
+                yield delta
+        if not produced:
+            yield _CHAT_FALLBACK
+    except Exception:  # noqa: BLE001 — never fail the request over the model
+        logger.exception("chat: AI reply failed, using fallback")
+        yield _CHAT_FALLBACK
