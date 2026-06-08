@@ -13,7 +13,7 @@ import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -45,6 +45,45 @@ OFFER_TTL = 48 * 60 * 60        # 48 hours (spec 5.5)
 CHATLOG_TTL = 2 * 60 * 60       # free-text conversation history window
 MAX_HISTORY = 12                # keep last N messages (6 turns) per session
 DISCOUNT_PERCENT = ai_consultant.DISCOUNT_PERCENT
+
+# Anti-abuse limits for the free-text chat, keyed by client IP. The model is the
+# only paid resource, so a blocked request never reaches it (no tokens spent).
+CHAT_BURST_LIMIT = 8            # messages per CHAT_BURST_WINDOW (anti rapid-fire)
+CHAT_BURST_WINDOW = 60         # seconds
+CHAT_DAILY_LIMIT = 120         # messages per IP per day
+CHAT_DAILY_WINDOW = 24 * 60 * 60
+
+_RATE_LIMIT_REPLY = (
+    "Вы задали уже много вопросов подряд — давайте сделаем небольшую паузу. "
+    "Если хотите записаться или нужна помощь, позвоните нам: +7 (495) 123-45-67. "
+    "Я снова на связи чуть позже 🌸"
+)
+
+
+def _client_ip(request: Request) -> str:
+    """Real visitor IP. Backend is reachable only via the trusted host nginx
+    (published on 127.0.0.1), which sets X-Real-IP, so these headers are safe."""
+    xri = request.headers.get("x-real-ip")
+    if xri:
+        return xri.strip()
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _over_limit(key: str, limit: int, window: int) -> bool:
+    """Fixed-window counter in Redis: INCR, set TTL on first hit, compare to limit."""
+    n = redis_client.incr(key)
+    if n == 1:
+        redis_client.expire(key, window)
+    return n > limit
+
+
+def _chat_rate_limited(ip: str) -> bool:
+    burst = _over_limit(f"chatrl:burst:{ip}", CHAT_BURST_LIMIT, CHAT_BURST_WINDOW)
+    daily = _over_limit(f"chatrl:day:{ip}", CHAT_DAILY_LIMIT, CHAT_DAILY_WINDOW)
+    return burst or daily
 
 # Server-side mirror of the questionnaire order (spec 5.2). skin_type is asked
 # only for face procedures.
@@ -163,14 +202,29 @@ def result(answers: ConsultAnswers) -> StreamingResponse:
 
 # ─── Free-text chat (streamed) ───────────────────────────────────────
 @router.post("/chat")
-def chat(body: BotChatRequest) -> StreamingResponse:
+def chat(body: BotChatRequest, request: Request) -> StreamingResponse:
     """Conversational assistant. Streams the reply as SSE `chunk` events, then a
     `done` event with the session id. Multi-turn history is kept in Redis
-    (chatlog:{session_id}) so the client only sends the latest message."""
+    (chatlog:{session_id}) so the client only sends the latest message.
+
+    Rate-limited per client IP: over the limit, a polite canned reply is streamed
+    and the model is never called (no tokens spent)."""
     session_id = body.session_id or uuid.uuid4().hex
     message = body.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="empty_message")
+
+    if _chat_rate_limited(_client_ip(request)):
+
+        def limited_stream():
+            yield f"event: chunk\ndata: {json.dumps({'text': _RATE_LIMIT_REPLY})}\n\n"
+            yield f"event: done\ndata: {json.dumps({'session_id': session_id})}\n\n"
+
+        return StreamingResponse(
+            limited_stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     raw = redis_client.get(_chatlog_key(session_id))
     history = json.loads(raw) if raw else []
