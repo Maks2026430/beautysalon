@@ -1,15 +1,34 @@
+"use client";
+
+import { useState } from "react";
 import { reviews } from "@/lib/data";
 import { Reveal } from "@/components/landing/Reveal";
 
-// Заглушки-фото клиентов (заменить на реальные позже).
-const PHOTOS = [
-  "https://randomuser.me/api/portraits/women/33.jpg",
-  "https://randomuser.me/api/portraits/women/48.jpg",
-  "https://randomuser.me/api/portraits/women/57.jpg",
-  "https://randomuser.me/api/portraits/women/21.jpg",
-  "https://randomuser.me/api/portraits/women/8.jpg",
-  "https://randomuser.me/api/portraits/women/75.jpg",
-];
+// Фото клиентов лежат локально в /public/reviews/<id>.jpg (на свой сервер,
+// чтобы грузились на мобильном). Если файла ещё нет — onError мягко заменяет
+// картинку на кружок с инициалом, без «битой» иконки.
+function Avatar({ name, src }: { name: string; src: string }) {
+  const [failed, setFailed] = useState(false);
+  const initial = name.trim().charAt(0).toUpperCase();
+
+  if (failed) {
+    return (
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-plum font-serif text-lg text-cream ring-2 ring-cream/20">
+        {initial}
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      onError={() => setFailed(true)}
+      className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-cream/20"
+    />
+  );
+}
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -53,12 +72,7 @@ export function Reviews() {
                   <Stars rating={review.rating} />
                 </div>
                 <figcaption className="mt-4 flex items-center gap-3 border-t border-cream/15 pt-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={PHOTOS[i % PHOTOS.length]}
-                    alt={review.name}
-                    className="h-12 w-12 rounded-full object-cover ring-2 ring-cream/20"
-                  />
+                  <Avatar name={review.name} src={`/reviews/${review.id}.jpg`} />
                   <div>
                     <div className="font-medium text-cream">{review.name}</div>
                     <div className="text-xs text-cream/60">{review.service}</div>

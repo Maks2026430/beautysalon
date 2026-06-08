@@ -7,6 +7,7 @@ import { services as staticServices, formatPrice, formatDuration, type Service }
 import { api, auth } from "@/lib/api";
 import { Reveal } from "@/components/landing/Reveal";
 import { SectionHeading } from "@/components/landing/SectionHeading";
+import { useBot } from "@/components/bot/BotProvider";
 
 // Метаданные категорий: фото-обложка, цвет (терракота/слива), иконка и размер
 // плитки в бенто-сетке. Терракота и слива чередуются для разнообразия.
@@ -85,6 +86,7 @@ function plural(n: number): string {
 
 export function Services() {
   const router = useRouter();
+  const { openBot } = useBot();
   const [services, setServices] = useState<Service[]>(staticServices);
   const [active, setActive] = useState<string | null>(null);
 
@@ -190,6 +192,28 @@ export function Services() {
               </Reveal>
             );
           })}
+
+          {/* Промо-плитка только для мобильных: заполняет пустую клетку в сетке
+              2×4 (7 категорий + 1) и ведёт в AI-подбор. На десктопе сетка 3×3
+              заполнена полностью, поэтому плитка скрыта (md:hidden). */}
+          <Reveal className="md:hidden">
+            <button
+              onClick={() => openBot()}
+              className="group relative flex h-full w-full flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-accent to-plum p-4 text-left text-cream shadow-[0_10px_40px_-24px_rgba(46,42,38,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <span aria-hidden className="text-2xl">
+                ✨
+              </span>
+              <div>
+                <h3 className="font-serif text-lg leading-tight text-cream">
+                  Не знаете, что выбрать?
+                </h3>
+                <span className="mt-1.5 inline-block text-xs font-medium text-cream/85">
+                  Подберём с AI →
+                </span>
+              </div>
+            </button>
+          </Reveal>
         </div>
       </div>
 
